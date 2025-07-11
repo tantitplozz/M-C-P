@@ -1,0 +1,52 @@
+# GOD-TIER AUTOBUY STACK - Prometheus Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Main Application Metrics
+  - job_name: "autobuy-stack"
+    static_configs:
+      - targets: ["autobuy-stack:8080"]
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # Node Exporter
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["autobuy-stack:8000"]
+    scrape_interval: 10s
+
+  # Redis Metrics
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis:6379"]
+    scrape_interval: 15s
+
+  # System Metrics
+  - job_name: "system"
+    static_configs:
+      - targets: ["localhost:8000"]
+    scrape_interval: 30s
+
+  # Browser Automation Metrics
+  - job_name: "browser-automation"
+    static_configs:
+      - targets: ["autobuy-stack:8080"]
+    scrape_interval: 30s
+    metrics_path: /metrics/browser
+
+  # Task Engine Metrics
+  - job_name: "task-engine"
+    static_configs:
+      - targets: ["autobuy-stack:8080"]
+    scrape_interval: 20s
+    metrics_path: /metrics/tasks

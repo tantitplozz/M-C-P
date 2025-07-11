@@ -1,0 +1,215 @@
+# GOD-TIER AUTOBUY STACK Configuration
+# Main configuration file for the entire system
+
+# System Settings
+system:
+  name: "GOD-TIER AUTOBUY STACK"
+  version: "1.0.0"
+  mode: "production" # development, testing, production
+  debug: false
+  log_level: "INFO"
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  timeout: 300
+  cors_origins: ["*"]
+
+# Database Configuration
+database:
+  memory:
+    type: "redis"
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: null
+
+  storage:
+    type: "sqlite"
+    path: "data/autobuy.db"
+
+  vector_db:
+    type: "chromadb"
+    path: "data/vector_store"
+
+# AI Models Configuration
+ai:
+  primary_model: "gpt-4-turbo"
+  fallback_model: "claude-3-sonnet"
+
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    model: "gpt-4-turbo"
+    temperature: 0.1
+    max_tokens: 4096
+
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    model: "claude-3-sonnet-20240229"
+    temperature: 0.1
+    max_tokens: 4096
+
+# LangGraph Task Engine
+langgraph:
+  max_iterations: 50
+  timeout: 600
+  memory_window: 10
+  checkpoint_interval: 5
+
+  nodes:
+    - task_planner
+    - decision_maker
+    - executor
+    - validator
+    - reporter
+
+  edges:
+    - planner -> decision_maker
+    - decision_maker -> executor
+    - executor -> validator
+    - validator -> reporter
+    - reporter -> planner
+
+# Agent-S2 GUI Controller
+agent_s2:
+  browser: "chrome"
+  headless: false
+  window_size: [1920, 1080]
+  user_agent: "auto"
+  stealth_mode: true
+
+  selenium:
+    implicit_wait: 10
+    page_load_timeout: 30
+    script_timeout: 30
+
+  playwright:
+    slow_mo: 100
+    timeout: 30000
+
+  automation:
+    human_like_delays: true
+    min_delay: 0.5
+    max_delay: 2.0
+    typing_speed: 0.1
+
+# OpenInterpreter Shell Controller
+interpreter:
+  auto_run: false
+  safe_mode: true
+  max_output: 5000
+  timeout: 300
+
+  python:
+    version: "3.11"
+    virtual_env: "autobuy_env"
+
+  shell:
+    allowed_commands: ["ls", "cd", "cat", "grep", "find", "curl", "wget"]
+    restricted_paths: ["/etc", "/usr", "/bin"]
+
+# Memory System
+memory:
+  max_sessions: 1000
+  session_ttl: 3600 # 1 hour
+  max_memory_per_session: 1000000 # 1MB
+
+  persistence:
+    enabled: true
+    backup_interval: 300 # 5 minutes
+    backup_count: 10
+
+# Monitoring & Logging
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+
+  grafana:
+    enabled: true
+    port: 3000
+
+  logging:
+    level: "INFO"
+    format: "json"
+    file: "logs/autobuy.log"
+    max_size: "100MB"
+    backup_count: 5
+
+# Security & Stealth
+security:
+  encryption_key: ${ENCRYPTION_KEY}
+
+  stealth:
+    enabled: true
+    user_agent_rotation: true
+    proxy_rotation: true
+    request_delays: true
+
+  proxy:
+    enabled: false
+    type: "http" # http, https, socks5
+    host: "localhost"
+    port: 8080
+    auth: false
+
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_limit: 10
+
+# Task Configuration
+tasks:
+  max_concurrent: 5
+  retry_attempts: 3
+  retry_delay: 5
+
+  autobuy:
+    enabled: true
+    max_price: 1000
+    auto_confirm: false
+    save_receipts: true
+
+  monitoring:
+    price_alerts: true
+    stock_alerts: true
+    deal_alerts: true
+
+# Website Configurations
+websites:
+  default:
+    timeout: 30
+    max_retries: 3
+    wait_between_actions: 1
+
+  amazon:
+    enabled: true
+    base_url: "https://amazon.com"
+    selectors:
+      search_box: "#twotabsearchtextbox"
+      search_button: "#nav-search-submit-button"
+      add_to_cart: "#add-to-cart-button"
+
+  shopee:
+    enabled: true
+    base_url: "https://shopee.co.th"
+    selectors:
+      search_box: ".shopee-searchbar-input__input"
+      search_button: ".shopee-searchbar__search-button"
+      add_to_cart: ".btn-solid-primary"
+
+# Development Settings
+development:
+  hot_reload: true
+  debug_mode: true
+  test_mode: false
+  mock_payments: true
+
+# Production Settings
+production:
+  cluster_mode: true
+  load_balancer: true
+  auto_scaling: true
+  health_checks: true
