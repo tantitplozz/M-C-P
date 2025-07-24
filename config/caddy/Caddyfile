@@ -1,0 +1,46 @@
+# OMNI AGENT STACK - Caddyfile
+# Secret Technique: Caddy as a Zero-Trust Gateway.
+# It handles automatic HTTPS for the public-facing domain and reverse proxies to internal services.
+# All internal traffic is on the 'omni_network' Docker network.
+
+{
+    # Global options
+    acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    email {env.ACME_EMAIL}
+    # Staging CA for development to avoid rate limits
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Main domain - handles WebUI and API traffic
+{$DOMAIN_NAME} {
+    # Reverse proxy to the WebUI service
+    reverse_proxy webui:3000
+
+    # Reverse proxy API calls to the API Gateway
+    # Secret Technique: Path-based routing.
+    route /api/* {
+        reverse_proxy api_gateway:8080
+    }
+
+    # Reverse proxy Grafana for monitoring
+    route /grafana/* {
+        reverse_proxy grafana:3000
+    }
+
+    # Enable compression for better performance
+    encode zstd gzip
+
+    # Security headers
+    header {
+        # Enable HSTS
+        Strict-Transport-Security "max-age=31536000;"
+        # Prevents clickjacking
+        X-Frame-Options "DENY"
+        # Prevents MIME-sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable basic XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

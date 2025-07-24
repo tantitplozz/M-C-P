@@ -1,0 +1,186 @@
+# OMNI AGENT STACK GOD-TIER (2025) - High-Performance, Self-Healing, Evolving Infrastructure
+# Secret Technique: Dynamic service discovery via internal DNS, zero-trust networking with Caddy.
+version: '3.9'
+
+networks:
+  omni_network:
+    driver: bridge
+    name: omni_network
+
+services:
+  # --- CORE INFRASTRUCTURE ---
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: omni_caddy_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./config/caddy/data:/data
+      - ./config/caddy/config:/config
+    networks:
+      - omni_network
+    depends_on:
+      - api_gateway
+      - webui
+      - grafana
+
+  # --- DATABASE & CACHING ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: omni_postgres_db
+    restart: unless-stopped
+    volumes:
+      - omni_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - omni_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: omni_redis_cache
+    restart: unless-stopped
+    networks:
+      - omni_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- BACKEND SERVICES (Go) ---
+  api_gateway:
+    build:
+      context: ./services/api_gateway
+      dockerfile: Dockerfile
+    container_name: omni_api_gateway
+    restart: unless-stopped
+    environment:
+      - GIN_MODE=release
+      - ORCHESTRATOR_URL=http://orchestrator:8081
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    networks:
+      - omni_network
+    depends_on:
+      - postgres
+      - orchestrator
+
+  orchestrator:
+    build:
+      context: ./services/orchestrator
+      dockerfile: Dockerfile
+    container_name: omni_orchestrator
+    restart: unless-stopped
+    environment:
+      - GIN_MODE=release
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      - REDIS_ADDR=redis:6379
+    networks:
+      - omni_network
+    depends_on:
+      - postgres
+      - redis
+
+  # --- SPECIALIZED AGENTS ---
+  visual_agent:
+    image: mcr.microsoft.com/playwright:v1.44.0-jammy
+    container_name: omni_visual_agent
+    restart: unless-stopped
+    ports:
+      - "${VISUAL_AGENT_PORT}:9222"
+    command: "npx -y @executeautomation/playwright-mcp-server --port 9222"
+    networks:
+      - omni_network
+
+  # --- FRONTEND SERVICE (SvelteKit) ---
+  webui:
+    build:
+      context: ./webui
+      dockerfile: Dockerfile
+    container_name: omni_webui
+    restart: unless-stopped
+    environment:
+      - API_GATEWAY_URL=http://api_gateway:8080
+    networks:
+      - omni_network
+    depends_on:
+      - api_gateway
+
+  # --- MONITORING & LOGGING STACK ---
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: omni_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - omni_prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - omni_network
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: omni_grafana
+    restart: unless-stopped
+    volumes:
+      - omni_grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - omni_network
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: omni_loki
+    restart: unless-stopped
+    volumes:
+      - ./config/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - omni_loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - omni_network
+
+  promtail:
+    image: grafana/promtail:2.9.5
+    container_name: omni_promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - omni_network
+    depends_on:
+      - loki
+
+volumes:
+  omni_postgres_data:
+    driver: local
+  omni_prometheus_data:
+    driver: local
+  omni_grafana_data:
+    driver: local
+  omni_loki_data:
+    driver: local

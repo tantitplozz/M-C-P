@@ -1,0 +1,32 @@
+# OMNI AGENT STACK - Prometheus Configuration
+# Secret Technique: Use Docker's internal DNS for service discovery.
+# Prometheus can find other services on the 'omni_network' by their container name.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'api_gateway'
+    # Secret Technique: Use dns_sd_configs for dynamic service discovery within Docker.
+    # This is more resilient than static_configs as containers can be replaced without changing this file.
+    dns_sd_configs:
+      - names:
+          - 'tasks.api_gateway' # Docker DNS name for the service
+        type: 'A'
+        port: 8080 # The port the service exposes for metrics (hypothetically)
+
+  - job_name: 'orchestrator'
+    dns_sd_configs:
+      - names:
+          - 'tasks.orchestrator'
+        type: 'A'
+        port: 8081
+
+  # Add other services that expose a /metrics endpoint here.
+  # For example, a Node.js service might use a library like 'prom-client'.
+  # A Go service would typically use the official Prometheus client library.

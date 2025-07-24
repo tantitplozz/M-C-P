@@ -1,0 +1,40 @@
+# OMNI AGENT STACK - .dockerignore
+# Secret Technique: A well-defined .dockerignore is crucial for smaller, faster, and more secure builds.
+# It prevents leaking secrets and credentials into the build context.
+
+# Ignore version control directories and files
+.git
+.gitignore
+.gitattributes
+
+# Ignore local development artifacts
+.env
+*.env.local
+*.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea
+.vscode/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore dependency directories (they will be installed inside the container)
+node_modules
+/webui/node_modules
+/services/**/vendor
+
+# Ignore build outputs and temporary files
+/webui/build
+/webui/.svelte-kit
+/services/**/bin
+/services/**/*.exe
+*.log
+
+# Ignore documentation and configuration files not needed in the final image
+README.md
+Makefile
+.dockerignore
+docker-compose.yml
